@@ -7,7 +7,7 @@
     { id:'kid-1', name:'Kid 1', type:'kid', emoji:'🍦' },
     { id:'kid-2', name:'Kid 2', type:'kid', emoji:'🧃' }
   ];
-  const freshState = () => ({ profileId:'adult-1', tab:'home', trip:{...defaultTrip}, profiles:structuredClone(defaultProfiles), places:[], reviews:[], entries:[], votes:[], lastArea:'', lastLocation:null });
+  const freshState = () => ({ profileId:'adult-1', tab:'home', trip:{...defaultTrip}, profiles:structuredClone(defaultProfiles), places:[], reviews:[], entries:[], votes:[], competitions:[], lastArea:'', lastLocation:null });
   let state;
   try { state = JSON.parse(localStorage.getItem(KEY) || 'null') || freshState(); }
   catch { state = freshState(); }
@@ -15,7 +15,7 @@
   for (const review of (state.reviews||[])) if (review.foodTest == null && review.tapasTest != null) review.foodTest = review.tapasTest;
   state.trip = {...defaultTrip, ...(state.trip || {})};
   state.profiles = Array.isArray(state.profiles) && state.profiles.length ? state.profiles : structuredClone(defaultProfiles);
-  for (const key of ['places','reviews','entries','votes']) if (!Array.isArray(state[key])) state[key] = [];
+  for (const key of ['places','reviews','entries','votes','competitions']) if (!Array.isArray(state[key])) state[key] = [];
   if (typeof state.lastArea !== 'string') state.lastArea = '';
   if (!state.lastLocation || !Number.isFinite(Number(state.lastLocation.latitude)) || !Number.isFinite(Number(state.lastLocation.longitude))) state.lastLocation = null;
   // Clear the old placeholder stops from the first prototype, while keeping any real entries.
@@ -23,7 +23,7 @@
   if (!state.profiles.some(p => p.id === state.profileId)) state.profileId = state.profiles[0].id;
   let selectedPlace = null, tripEditorOpen = false, formScores = {}, reviewType='food', selectedSearchPlace=null;
   let placeSearchResults=[], lastPlaceSearchAt=0, googleMapsLoading;
-  let diaryKind = 'photo', diaryDay = dayKey();
+  let diaryKind = 'photo', diaryDay = dayKey(), selectedCompetitionId = null, competitionDraftQuestionCount = 4;
   const app = document.querySelector('#app'), select = document.querySelector('#profile-select');
   const ratingSets = {
     food: [['foodTest','Food Test'],['walletDamage','Wallet Damage'],['vibeCheck','Vibe Check'],['peopleWatching','People Watching'],['holidayFeeling','Holiday Feeling'],['looRating','Loo Rating'],['worthTheWalk','Worth the Walk?']],
@@ -55,6 +55,7 @@
     if (selectedPlace) return renderPlace(selectedPlace);
     if (state.tab==='places') return renderPlaces();
     if (state.tab==='diary') return renderDiary();
+    if (state.tab==='competition') return renderCompetition();
     if (state.tab==='awards') return renderAwards();
     if (state.tab==='family') return renderFamily();
     renderHome();
@@ -166,6 +167,33 @@
       ${entries.length?['photo','quote'].map(kind=>{const candidates=entries.filter(e=>e.kind===kind),winnersForKind=kind==='photo'?pw:qw;return candidates.length?`<section class="vote-category ${kind==='quote'?'quote-vote':'photo-vote'}"><h3><span>${kind==='photo'?'📸':'💬'}</span>${kind==='photo'?'Best holiday photo':'Quote of the day'}</h3><p class="vote-category-hint">${kind==='photo'?'Whose photo deserves the fridge?':'Who delivered the line of the holiday?'}</p><div class="vote-candidates">${candidates.map(entry=>{const author=person(entry.profileId),voters=state.votes.filter(v=>v.entryId===entry.id),chosen=voters.some(v=>v.profileId===state.profileId),winning=winnersForKind.includes(entry.id);return `<article class="vote-card ${chosen?'is-voted':''} ${winning?'is-winning':''}">${entry.photoUri?`<img class="vote-image" src="${entry.photoUri}" alt="${esc(entry.text||'Holiday photo')}">`:''}<div class="vote-card-body"><div class="vote-card-meta"><span class="author-badge">${esc(author.emoji)} ${esc(author.name)}</span>${winning?'<span class="leader">🏆 In the lead</span>':''}</div>${entry.text?`<p class="${kind==='quote'?'quote':''}">${esc(entry.text)}</p>`:''}${kind==='quote'&&entry.quoteAuthor?`<p class="quote-author">— ${esc(entry.quoteAuthor)} said this (allegedly)</p>`:''}<div class="vote-card-bottom"><div class="voter-stack" aria-label="${voters.length} votes">${voters.map(v=>`<span title="${esc(person(v.profileId).name)}">${esc(person(v.profileId).emoji)}</span>`).join('')||'<small>No votes yet</small>'}</div><button class="vote ${chosen?'selected':''}" data-vote="${esc(entry.id)}">${chosen?'✓ Your vote':'👆 I vote for this'} <span>${voteCount(entry.id)}</span></button>${entry.profileId===state.profileId?`<button class="delete" data-delete="${esc(entry.id)}" aria-label="Delete your entry">🗑️</button>`:''}</div></div></article>`;}).join('')}</div></section>`:'';}).join(''):`<article class="card empty"><strong>No evidence for ${diaryDay===dayKey()?'today':esc(diaryDay)} yet.</strong><p>Add a photo or quote above, then the family can vote.</p></article>`}</section>
       ${syncNote}</div>`;
   }
+  function competitionQuestionField(index) {
+    return `<article class="competition-question-builder"><div class="competition-question-number">📸 Question ${index+1}</div><label class="field">Photo<input name="question-photo-${index}" type="file" accept="image/*" required><small class="hint">Choose a clear picture for this question.</small></label><label class="field">Question or clue <span class="optional-label">(optional)</span><input name="question-prompt-${index}" maxlength="180" placeholder="What is this? Where was it taken?"></label><label class="field">Correct answer<input name="question-answer-${index}" maxlength="120" placeholder="Add accepted answers separated by |" required><small class="hint">Example: Malaga | Málaga</small></label></article>`;
+  }
+  const normaliseQuizAnswer = answer => String(answer||'').toLocaleLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^\p{L}\p{N}]/gu,'');
+  function competitionPoints(competition, submission) {
+    return competition.questions.reduce((points,question)=>{
+      const answer=normaliseQuizAnswer(submission.answers?.[question.id]);
+      const accepted=String(question.answer||'').split('|').map(normaliseQuizAnswer).filter(Boolean);
+      return points+(answer&&accepted.includes(answer)?1:0);
+    },0);
+  }
+  function renderCompetition() {
+    const competition=state.competitions.find(item=>item.id===selectedCompetitionId);
+    if(competition){
+      const submissions=competition.submissions||[],revealed=competition.status==='revealed',live=competition.status==='live';
+      const answerStatuses=competition.entrants.map(entrant=>({entrant,submission:submissions.find(item=>item.entrantId===entrant.id)}));
+      const leaderboard=answerStatuses.filter(row=>row.submission).sort((a,b)=>competitionPoints(competition,b.submission)-competitionPoints(competition,a.submission)||a.entrant.name.localeCompare(b.entrant.name));
+      app.innerHTML=`<div class="content competition-page"><button class="soft-button" data-competition-back>← All competitions</button><div class="competition-hero"><div class="eyebrow">🏆 FAMILY PHOTO CHALLENGE</div><h1>${esc(competition.name)}</h1><p>${competition.mode==='teams'?'Teams':'Solo players'} · ${competition.questions.length} photo questions · ${competition.entrants.length} ${competition.mode==='teams'?'teams':'players'}</p><div class="competition-stickers" aria-hidden="true">⭐ 😊 📸 🎉</div></div>
+      ${competition.status==='setup'?`<section class="competition-status setup"><strong>🧰 Ready to play?</strong><span>Check the photo questions, then start the quiz.</span></section><div class="competition-question-preview">${competition.questions.map((question,index)=>`<article class="competition-photo-card"><img src="${question.photoUri}" alt="Photo for question ${index+1}"><div><span class="question-chip">QUESTION ${index+1}</span><strong>${esc(question.prompt||'What is in this photo?')}</strong></div></article>`).join('')}</div><button class="button competition-main-button" data-start-competition="${esc(competition.id)}">Start the quiz 🚀</button>`:''}
+      ${live?`<section class="competition-status live"><strong>🎉 Quiz is on!</strong><span>${submissions.length} of ${competition.entrants.length} ${competition.mode==='teams'?'teams':'players'} have sent their answers. Pass this phone around so each entrant can submit.</span></section><form id="submit-competition-answers" class="card form competition-answer-form"><label class="field">Who’s submitting?<select name="entrantId" required>${competition.entrants.map(entrant=>`<option value="${esc(entrant.id)}">${esc(entrant.name)}${submissions.some(item=>item.entrantId===entrant.id)?' · update answers':''}</option>`).join('')}</select></label><p class="competition-tip">Look at each photo and enter one answer. You can change your answers until the host reveals them.</p>${competition.questions.map((question,index)=>`<article class="competition-answer-card"><div class="competition-answer-top"><span class="question-chip">QUESTION ${index+1}</span><span>⭐ 1 point</span></div><img src="${question.photoUri}" alt="Photo question ${index+1}"><h3>${esc(question.prompt||`What is in photo ${index+1}?`)}</h3><label class="field">Your answer<input name="answer-${esc(question.id)}" maxlength="120" placeholder="Type your answer…" required></label></article>`).join('')}<button class="button competition-main-button" type="submit">Submit answers 🎯</button></form><div class="competition-entry-status"><strong>Answer sheets</strong>${answerStatuses.map(({entrant,submission})=>`<div><span>${esc(entrant.name)}</span><b>${submission?'✅ Submitted':'⏳ Still thinking'}</b></div>`).join('')}</div>${submissions.length?`<button class="soft-button reveal-button" data-reveal-competition="${esc(competition.id)}">Reveal answers & scores 🏆</button>`:''}`:''}
+      ${revealed?`<section class="competition-status revealed"><strong>🏁 Results are in!</strong><span>Here’s how everyone did.</span></section><div class="competition-leaderboard">${leaderboard.length?leaderboard.map((row,index)=>`<article class="leaderboard-row ${index===0?'champion':''}"><span class="leaderboard-medal">${['🥇','🥈','🥉'][index]||'⭐'}</span><span class="leaderboard-name"><strong>${esc(row.entrant.name)}</strong><small>${index===0&&leaderboard.length>1?'Quiz champion':`${competitionPoints(competition,row.submission)} correct`}</small></span><strong class="leaderboard-score">${competitionPoints(competition,row.submission)} / ${competition.questions.length}</strong></article>`).join(''):'<p>No answers were submitted this time.</p>'}</div><div class="competition-answer-key"><h2>The answers</h2>${competition.questions.map((question,index)=>`<article><img src="${question.photoUri}" alt="Question ${index+1}"><div><span class="question-chip">QUESTION ${index+1}</span><p>${esc(question.prompt||'What is in this photo?')}</p><strong>✅ ${esc(question.answer)}</strong></div></article>`).join('')}</div>`:''}
+      ${syncNote}</div>`;
+      return;
+    }
+    app.innerHTML=`<div class="content competition-page"><div class="eyebrow">🏆 FAMILY PHOTO CHALLENGE</div><div class="competition-hero"><div class="competition-stickers" aria-hidden="true">⭐ 😊 📸 🎉</div><h1>Quiz time!</h1><p>Start a photo quiz, choose teams or solo players, and let the family battle it out.</p></div><form id="create-competition" class="card form competition-create-form"><div class="competition-form-heading"><span>✨</span><div><strong>Set up a competition</strong><small>Photos, guesses and one extremely important trophy.</small></div></div><label class="field">Competition name<input name="name" maxlength="70" placeholder="e.g. Who knows Fuengirola best?" required></label><label class="field">How are we playing?<select name="mode"><option value="teams">👥 Teams</option><option value="solo">🧍 Everyone plays solo</option></select></label><label class="field">${'Team names or player names'}<textarea name="entrants" maxlength="400" placeholder="The Squibbs, Team Arthur, The Snack Attack" required></textarea><small class="hint">Enter one name per line or separate names with commas. Use team names for teams, or each person’s name for solo play.</small></label><div class="competition-questions-heading"><h2>Photo questions</h2><span>📸 ${competitionDraftQuestionCount} ready</span></div><div id="competition-question-builders">${Array.from({length:competitionDraftQuestionCount},(_,index)=>competitionQuestionField(index)).join('')}</div><button class="soft-button add-question-button" type="button" data-add-competition-question>＋ Add another photo question</button><small class="hint">Photos are resized and saved on this device. Add as many rounds as you like.</small><button class="button competition-main-button" type="submit">Create competition 🚀</button></form>
+      ${state.competitions.length?`<div class="section-head"><div><div class="eyebrow">PAST & CURRENT GAMES</div><h2>Pick up where you left off</h2></div></div><div class="competition-history">${[...state.competitions].reverse().map(item=>`<button class="card competition-history-card" data-open-competition="${esc(item.id)}"><span class="history-cup">🏆</span><span><strong>${esc(item.name)}</strong><small>${item.entrants.length} ${item.mode==='teams'?'teams':'players'} · ${item.questions.length} photos</small></span><span class="history-status ${esc(item.status)}">${item.status==='revealed'?'Results':item.status==='live'?'Playing':'Ready'}</span></button>`).join('')}</div>`:''}${syncNote}</div>`;
+  }
   function renderAwards() {
     const scored=rankedPlaces().filter(p=>average(p.id));
     const awardRows=[['overall',"The place we'd actually return to",'A unanimous family decision is not required.'],['foodTest','The Food Test','Big plates. Bigger opinions.'],['walletDamage','Best survival of the wallet','The budget would like a word.'],['properGlass','Proper Glass?','We are not snobs. We are investigators.'],['vibeCheck','Best Vibe Check','Lighting can hide a lot.'],['holidayFeeling','Maximum Holiday Feeling','Holiday mode: activated-ish.'],['oneMoreThen','One More Then?','Famous last words, entered into evidence.'],['tomorrowRisk','Tomorrow Morning Risk','The judges reserve the right to amend scores.']];
@@ -242,6 +270,11 @@
     const button=event.target.closest('button,[data-open-place]');if(!button)return;
     if(button.dataset.tab)setTab(button.dataset.tab);
     else if(button.dataset.goto)setTab(button.dataset.goto);
+    else if(button.hasAttribute('data-competition-back')){selectedCompetitionId=null;renderCompetition();}
+    else if(button.dataset.openCompetition){selectedCompetitionId=button.dataset.openCompetition;renderCompetition();}
+    else if(button.dataset.startCompetition){const competition=state.competitions.find(item=>item.id===button.dataset.startCompetition);if(competition){competition.status='live';selectedCompetitionId=competition.id;save();renderCompetition();}}
+    else if(button.dataset.revealCompetition){const competition=state.competitions.find(item=>item.id===button.dataset.revealCompetition);if(competition){if((competition.submissions||[]).length<competition.entrants.length)return alert('Wait until every team or player has submitted their answers.');competition.status='revealed';save();renderCompetition();}}
+    else if(button.hasAttribute('data-add-competition-question')){const holder=document.querySelector('#competition-question-builders');if(holder){holder.insertAdjacentHTML('beforeend',competitionQuestionField(competitionDraftQuestionCount));competitionDraftQuestionCount++;const count=document.querySelector('.competition-questions-heading span');if(count)count.textContent=`📸 ${competitionDraftQuestionCount} ready`;}}
     else if(button.dataset.openPlace){selectedPlace=button.dataset.openPlace;formScores={};render();}
     else if(button.hasAttribute('data-back')){selectedPlace=null;state.tab='places';render();}
     else if(button.dataset.rating){formScores[button.dataset.rating]=Number(button.dataset.score);const form=document.querySelector('#add-review');if(form){const holder=form.querySelector(`[data-rating-group="${button.dataset.rating}"]`);if(holder){const selected=formScores[button.dataset.rating];holder.querySelectorAll('button').forEach(face=>face.classList.toggle('on',button.dataset.rating==='overall'?Number(face.dataset.score)===selected:Number(face.dataset.score)<=selected));const value=holder.closest('.rating-line')?.querySelector('.rating-value');if(value)value.textContent=`${selected}/5`;const scale=form.querySelector('.face-scale');if(scale&&button.dataset.rating==='overall')scale.classList.add('rated');}}}
@@ -262,6 +295,26 @@
   document.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.target;
     if(form.id==='place-finder'){const d=new FormData(form);searchPlaces(String(d.get('query')||''));}
+    else if(form.id==='create-competition'){
+      const d=new FormData(form),name=String(d.get('name')||'').trim(),mode=String(d.get('mode'));
+      const entrantNames=String(d.get('entrants')||'').split(/[\n,;]+/).map(value=>value.trim()).filter(Boolean).filter((value,index,all)=>all.findIndex(other=>other.toLocaleLowerCase()===value.toLocaleLowerCase())===index);
+      if(entrantNames.length<2)return alert('Add at least two teams or players so there’s someone to beat.');
+      const questions=[];
+      for(let index=0;index<competitionDraftQuestionCount;index++){
+        const file=d.get(`question-photo-${index}`),answer=String(d.get(`question-answer-${index}`)||'').trim(),prompt=String(d.get(`question-prompt-${index}`)||'').trim();
+        if(!(file instanceof File)||!file.size||!answer)return alert(`Add a photo and answer for question ${index+1}.`);
+        try{questions.push({id:`question-${Date.now()}-${index}`,photoUri:await compressPhoto(file),prompt,answer});}catch{return alert(`The photo for question ${index+1} could not be opened. Choose another.`);}
+      }
+      const competition={id:`competition-${Date.now()}`,name,mode:mode==='solo'?'solo':'teams',entrants:entrantNames.map((entrantName,index)=>({id:`entrant-${Date.now()}-${index}`,name:entrantName})),questions,submissions:[],status:'setup',createdAt:new Date().toISOString()};
+      state.competitions.push(competition);selectedCompetitionId=competition.id;competitionDraftQuestionCount=4;if(save())renderCompetition();
+    }
+    else if(form.id==='submit-competition-answers'){
+      const competition=state.competitions.find(item=>item.id===selectedCompetitionId);if(!competition||competition.status!=='live')return;
+      const d=new FormData(form),entrantId=String(d.get('entrantId')),entrant=competition.entrants.find(item=>item.id===entrantId);if(!entrant)return alert('Choose your team or player name first.');
+      const answers={};for(const question of competition.questions){const answer=String(d.get(`answer-${question.id}`)||'').trim();if(!answer)return alert('Answer every photo question before submitting.');answers[question.id]=answer;}
+      const submission={entrantId,answers,submittedAt:new Date().toISOString()},existing=competition.submissions.findIndex(item=>item.entrantId===entrantId);if(existing>=0)competition.submissions[existing]=submission;else competition.submissions.push(submission);
+      if(save())renderCompetition();
+    }
     else if(form.id==='trip-form'){const d=new FormData(form);state.trip.name=String(d.get('name')).trim()||defaultTrip.name;state.trip.destination=String(d.get('destination')).trim()||defaultTrip.destination;state.trip.startDate=String(d.get('startDate'));state.trip.endDate=String(d.get('endDate'));if(state.trip.startDate&&state.trip.endDate&&state.trip.endDate<state.trip.startDate)return alert('The return date needs to be after the start date.');tripEditorOpen=false;save();renderHome();}
     else if(form.id==='add-place'){const d=new FormData(form),photo=d.get('placePhoto'),place={id:`place-${Date.now()}`,type:String(d.get('type')),name:String(d.get('name')).trim(),address:String(d.get('address')).trim()};if(photo instanceof File&&photo.size){try{place.photoUri=await compressPhoto(photo);}catch{return alert('That photo could not be opened. Please choose another.');}}if(selectedSearchPlace){place.lat=selectedSearchPlace.lat;place.lon=selectedSearchPlace.lon;place.osmPlaceId=selectedSearchPlace.osmPlaceId;}state.places.unshift(place);if(save()){selectedSearchPlace=null;renderPlaces();}}
     else if(form.id==='place-photo-form'){const d=new FormData(form),photo=d.get('placePhoto'),place=state.places.find(p=>p.id===selectedPlace);if(!(photo instanceof File)||!photo.size)return alert('Choose a photo first.');if(!place)return;try{place.photoUri=await compressPhoto(photo);}catch{return alert('That photo could not be opened. Please choose another.');}if(save())renderPlace(selectedPlace);}
