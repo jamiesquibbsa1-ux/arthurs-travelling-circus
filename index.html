@@ -6,14 +6,15 @@
   <meta name="theme-color" content="#12364a">
   <meta name="description" content="A family holiday passport for the places, meals and memories worth talking about — and the ones that need a formal complaint.">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" type="image/svg+xml" href="./passport-icon.svg">
+  <link rel="icon" type="image/jpeg" href="./circus-logo.jpg">
+  <link rel="apple-touch-icon" href="./circus-logo.jpg">
   <link rel="stylesheet" href="./styles.css">
   <title>Arthur's Holiday Passport</title>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><div class="brand-mark" aria-hidden="true"><span>AHP</span><b>✦</b></div><div><strong>Arthur's Holiday Passport</strong><small>FAMILY EDITION · HONEST REVIEWS</small></div></div>
+      <div class="brand"><img class="brand-logo" src="./circus-logo.jpg" alt="Arthur’s holiday coach logo"><div><strong>Arthur's Holiday Passport</strong><small>EAT. DRINK. RATE. REPEAT.</small></div></div>
       <label class="profile-switch"><span>Writing as</span><select id="profile-select" aria-label="Choose family member"></select></label>
     </header>
     <main id="app" tabindex="-1"></main>
@@ -25,6 +26,7 @@
       <button data-tab="family"><span>♙</span>Family</button>
     </nav>
   </div>
+  <script src="./backend-config.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

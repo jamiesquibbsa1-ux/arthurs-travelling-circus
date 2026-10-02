@@ -1,11 +1,11 @@
 {
   "name": "Arthur's Holiday Passport",
   "short_name": "Holiday Passport",
-  "description": "Family holiday memories and brutally fair place reviews.",
+  "description": "Eat, drink, rate, repeat: family holiday memories and honest reviews.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4eddd",
   "theme_color": "#12364a",
-  "icons": [{"src":"./passport-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]
+  "icons": [{"src":"./circus-logo.jpg","sizes":"640x640","type":"image/jpeg","purpose":"any"}]
 }
