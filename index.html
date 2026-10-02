@@ -16,6 +16,7 @@
     <header class="topbar">
       <div class="brand"><img class="brand-logo" src="./circus-logo.jpg" alt="Arthur’s holiday coach logo"><div><strong>Arthur's Holiday Passport</strong><small>EAT. DRINK. RATE. REPEAT.</small></div></div>
       <label class="profile-switch"><span>Writing as</span><select id="profile-select" aria-label="Choose family member"></select></label>
+      <div id="account-session" class="account-session"></div>
     </header>
     <main id="app" tabindex="-1"></main>
     <nav class="bottom-nav" aria-label="Main navigation">
@@ -28,6 +29,8 @@
     </nav>
   </div>
   <script src="./backend-config.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js" defer></script>
+  <script src="./shared-client.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
