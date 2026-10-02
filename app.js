@@ -20,9 +20,8 @@
   // Clear the old placeholder stops from the first prototype, while keeping any real entries.
   state.places = state.places.filter(p => p.address !== 'Your holiday destination');
   if (!state.profiles.some(p => p.id === state.profileId)) state.profileId = state.profiles[0].id;
-  let selectedPlace = null, tripEditorOpen = false, formScores = {}, reviewType='food', useGpsForSearch=false, googleResults=[];
-  let googleMapsLoading;
-  useGpsForSearch = !!state.lastLocation;
+  let selectedPlace = null, tripEditorOpen = false, formScores = {}, reviewType='food', selectedSearchPlace=null;
+  let placeSearchResults=[], lastPlaceSearchAt=0, googleMapsLoading;
   let diaryKind = 'photo', diaryDay = dayKey();
   const app = document.querySelector('#app'), select = document.querySelector('#profile-select');
   const ratingSets = {
@@ -57,6 +56,22 @@
     if (state.tab==='family') return renderFamily();
     renderHome();
   }
+  function googleConfig() { return window.HOLIDAY_PASSPORT_CONFIG || {}; }
+  async function loadGoogleMaps() {
+    const key=googleConfig().googleMapsApiKey;
+    if(!key)throw new Error('Google Maps key is not configured.');
+    if(window.google?.maps?.importLibrary)return window.google.maps;
+    if(!googleMapsLoading)googleMapsLoading=new Promise((resolve,reject)=>{
+      const callback=`holidayMapsLoaded${Date.now()}`;
+      const timer=setTimeout(()=>{delete window[callback];reject(new Error('Google Maps did not finish loading.'));},12000);
+      window[callback]=()=>{clearTimeout(timer);delete window[callback];resolve(window.google.maps);};
+      const script=document.createElement('script');
+      script.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=${callback}`;
+      script.async=true;script.onerror=()=>{delete window[callback];reject(new Error('Google Maps could not load.'));};
+      document.head.appendChild(script);
+    });
+    return googleMapsLoading;
+  }
   async function hydrateSavedGooglePlaces() {
     const missing=state.places.filter(place=>place.googlePlaceId&&!sessionPlaceDetails.has(place.googlePlaceId)&&!pendingPlaceDetails.has(place.googlePlaceId)&&!failedPlaceDetails.has(place.googlePlaceId));
     if(!missing.length||!googleConfig().googleMapsApiKey)return;
@@ -85,6 +100,7 @@
     app.innerHTML = `<div class="content">
       <div class="page-kicker"><span>FAMILY HOLIDAY FIELD GUIDE · OFFICIAL-ISH</span><span>OPINIONS MAY CHANGE AFTER DESSERT</span></div>
       <section class="passport-cover"><div class="cover-seal">ATC<br><b>✦</b></div><div class="cover-copy"><div class="eyebrow">EAT. DRINK. RATE. REPEAT.</div><h1>${esc(state.trip.name)}</h1><p>${esc(state.trip.destination)} <span>·</span> ${esc(dated)}</p><div class="cover-bottom"><span>${esc(person(state.profileId).emoji)} Pen currently held by: <b>${esc(person(state.profileId).name)}</b></span><button class="text-button" data-action="edit-trip">${tripEditorOpen?'Close trip details':'Edit trip details'}</button></div></div></section>
+      <div class="snack-stickers" aria-hidden="true"><span>🍺</span><span>🍔</span><span>🍟</span><span>🍹</span><span>🍦</span></div>
       ${tripEditorOpen ? `<form id="trip-form" class="card form"><div class="form-heading"><span class="eyebrow">TRIP DETAILS</span><span class="muted">The admin department is you.</span></div><label class="field">Trip name<input name="name" maxlength="70" value="${esc(state.trip.name)}" placeholder="e.g. The annual family expedition"></label><label class="field">Destination<input name="destination" maxlength="100" value="${esc(state.trip.destination)}" placeholder="Town, island or airport lounge"></label><div class="two-col"><label class="field">From<input name="startDate" type="date" value="${esc(state.trip.startDate)}"></label><label class="field">To<input name="endDate" type="date" value="${esc(state.trip.endDate)}"></label></div><button class="button" type="submit">Save trip details</button></form>` : ''}
       <div class="stat-strip"><div><strong>${state.places.length}</strong><span>places logged</span></div><div><strong>${reviews}</strong><span>verdicts filed</span></div><div><strong>${entries}</strong><span>memories saved</span></div></div>
       <div class="quick-actions"><button data-goto="places"><span>＋</span><b>Find food or a drink</b><small>Record the bill before everyone forgets who ordered it.</small></button><button data-goto="diary"><span>▤</span><b>Save the evidence</b><small>Photos, quotes and the family’s highly reliable version.</small></button></div>
@@ -104,12 +120,11 @@
   }
   function renderPlaces() {
     const list = rankedPlaces();
-    const locationText = state.lastLocation ? 'Your last location is saved on this phone. Tap “Find me” to refresh it.' : 'Use your phone’s location, or type a town. We’ll remember the area on this phone.';
-    app.innerHTML = `<div class="content"><div class="eyebrow">THE FAMILY FOOD & DRINK FILE · ${state.places.length} ENTRIES</div><h1>Where did we eat, drink or make a questionable decision?</h1><p class="lede">Find somewhere nearby, then file the evidence before the bill mysteriously disappears.</p>
-      <section class="card map-finder"><div class="row space"><div><div class="eyebrow">THE “WHERE ARE WE?” BUTTON</div><h2>Find places near us</h2></div><button class="soft-button" type="button" data-locate>📍 Find me</button></div><p class="hint" id="location-status">${esc(locationText)}</p><p class="map-privacy">Your phone asks before sharing location. We only use it when you tap “Find it”.</p><label class="field">Search around<input class="search-area" id="search-area" value="${esc(state.lastArea)}" placeholder="Type a town, or tap Find me"></label><div class="nearby-search-row"><label class="field grow">Looking for…<input id="nearby-query" placeholder="tapas, pub, cocktail bar, ice cream…"></label><button class="button" type="button" data-nearby-search>Search Google Maps</button></div><div id="nearby-results"></div></section>
+    app.innerHTML = `<div class="content"><div class="eyebrow">THE HOLIDAY SNACK HUNT · ${state.places.length} PLACES</div><div class="snack-stickers page-stickers" aria-hidden="true"><span>🍺</span><span>🍔</span><span>🍟</span><span>🍹</span><span>🍦</span></div><h1>Where are we eating, drinking or making questionable choices?</h1><p class="lede">Type a place name. Pick the nearest one. Pretend the bill was a surprise.</p>
+      <section class="card map-finder fun-finder"><div class="finder-top"><div><div class="eyebrow">📍 SEARCH NEARBY</div><h2>Find a place in Fuengirola</h2></div></div><form id="place-finder" class="place-finder-form"><label class="field place-lookup-label">Bar, restaurant or place<input id="nearby-query" name="query" autocomplete="off" placeholder="Try McDonald’s, tapas or a bar…" required minlength="2"></label><button class="button place-search-button" type="submit">Search</button></form><p class="hint" id="location-status">Search by name and choose the right place from the results.</p><div id="nearby-suggestions" class="suggestions" role="listbox" aria-label="Places in Fuengirola"></div><div class="google-attribution"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Map data © OpenStreetMap contributors</a></div><p class="finder-joke">Find it, file it, blame whoever picked it.</p></section>
       <input class="search" id="place-search" placeholder="Search places already logged…" aria-label="Search saved places"><div id="place-list">${placeCards(list)}</div>
       <div class="section-head"><div><div class="eyebrow">FOUND SOMEWHERE WORTH A LOOK?</div><h2>Add it to the evidence</h2></div></div>
-      <form id="add-place" class="card form"><label class="field">Name of place<input id="new-place-name" name="name" required maxlength="80" placeholder="The place with suspiciously good garlic bread"></label><label class="field">Town or address<input id="new-place-address" name="address" required maxlength="180" placeholder="We’ll remember this bit for you"></label><div class="row"><label class="field grow">What sort of place?<select name="type"><option>Restaurant</option><option>Bar</option><option>Cafe</option><option>Beach</option><option>Market</option><option>Attraction</option><option>Other</option></select></label><button class="button" type="submit">Add it to the passport</button></div></form>
+      <form id="add-place" class="card form"><label class="field">Name of place<input id="new-place-name" name="name" required maxlength="80" placeholder="The place with suspiciously good chips"></label><label class="field">Town or address<input id="new-place-address" name="address" required maxlength="180" placeholder="Fuengirola, Spain"></label><div class="row"><label class="field grow">What are we reviewing?<select name="type"><option>Restaurant</option><option>Bar</option><option>Cafe</option><option>Beach</option><option>Market</option><option>Attraction</option><option>Other</option></select></label><button class="button" type="submit">Add to our holiday list</button></div></form>
       ${syncNote}</div>`;
   }
   const starRow = (dimension,label) => `<div class="rating-line"><span>${esc(label)}</span><div class="rating" data-rating-group="${esc(dimension)}" role="group" aria-label="Rate ${esc(label)}">${[1,2,3,4,5].map(n=>`<button type="button" class="${(formScores[dimension]||0)>=n?'on':''}" data-rating="${dimension}" data-score="${n}" aria-label="${n} out of 5">★</button>`).join('')}</div></div>`;
@@ -166,64 +181,55 @@
     return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=()=>{const image=new Image();image.onerror=reject;image.onload=()=>{const scale=Math.min(1,1400/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.round(image.width*scale);canvas.height=Math.round(image.height*scale);canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);resolve(canvas.toDataURL('image/jpeg',.78));};image.src=reader.result;};reader.readAsDataURL(file);});
   }
   const locationStatus = message => { const node=document.querySelector('#location-status'); if(node)node.textContent=message; };
-  function googleConfig() { return window.HOLIDAY_PASSPORT_CONFIG || {}; }
-  async function loadGoogleMaps() {
-    const key=googleConfig().googleMapsApiKey;
-    if(!key)throw new Error('Add the Google Maps browser key in backend-config.js to turn on in-app search.');
-    if(window.google?.maps?.importLibrary)return window.google.maps;
-    if(!googleMapsLoading)googleMapsLoading=new Promise((resolve,reject)=>{
-      const callback=`holidayMapsLoaded${Date.now()}`;
-      const timer=setTimeout(()=>{delete window[callback];reject(new Error('Google Maps did not finish loading. Check billing, enabled APIs and the website restriction.'));},12000);
-      window[callback]=()=>{clearTimeout(timer);delete window[callback];resolve(window.google.maps);};
-      const script=document.createElement('script');
-      script.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly&loading=async&callback=${callback}`;
-      script.async=true;script.onerror=()=>{delete window[callback];reject(new Error('Google Maps could not load. Check the key, website restriction and enabled APIs.'));};
-      document.head.appendChild(script);
-    });
-    return googleMapsLoading;
-  }
   function googleMapsLink(place) {
     const url = place.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.address}`)}`;
     return esc(url);
   }
-  function renderGoogleResults(places, query, center) {
-    const output=document.querySelector('#nearby-results'); if(!output)return;
-    googleResults=places;
-    if(!places.length){output.innerHTML='<div class="nearby-empty">No places came back. Try a broader search — the family’s definition of “nearby” is not legally binding.</div>';return;}
-    output.innerHTML=`<div class="nearby-map" id="nearby-map" aria-label="Google Maps place results"></div><div class="google-attribution" translate="no">Google Maps</div><p class="map-credit">Google orders results by relevance to your search and the area shown on the map.</p><div class="nearby-list">${places.map((p,i)=>`<article class="nearby-card"><div><strong>${esc(p.displayName||'Unnamed place')}</strong><small>${esc(p.formattedAddress||'Address not supplied')}${p.primaryTypeDisplayName?` · ${esc(p.primaryTypeDisplayName)}`:''}</small></div><div class="nearby-actions"><a class="soft-button" href="${googleMapsLink({googleMapsUri:p.googleMapsURI,name:p.displayName,address:p.formattedAddress})}" target="_blank" rel="noreferrer">Google Maps ↗</a><button class="button" type="button" data-select-google-place="${i}">Use this place</button></div></article>`).join('')}</div>`;
-    (async()=>{
-      try {
-        const maps=await loadGoogleMaps(),{Map}=await maps.importLibrary('maps'),{AdvancedMarkerElement}=await maps.importLibrary('marker');
-        const bounds=new maps.LatLngBounds();
-        const firstLocation=places.find(place=>place.location)?.location;
-        const centerPoint=center?{lat:center.latitude,lng:center.longitude}:firstLocation||{lat:0,lng:0};
-        const map=new Map(document.querySelector('#nearby-map'),{center:centerPoint,zoom:14,mapId:'DEMO_MAP_ID',mapTypeControl:false,streetViewControl:false});
-        places.forEach(place=>{if(!place.location)return;bounds.extend(place.location);new AdvancedMarkerElement({map,position:place.location,title:place.displayName});});
-        if(places.length>1)map.fitBounds(bounds,32);
-      } catch(error) {const node=document.querySelector('#nearby-map');if(node)node.innerHTML=`<div class="nearby-empty">${esc(error.message||'The map could not load.')}</div>`;}
-    })();
+  function formatDistance(meters) {
+    if(!Number.isFinite(meters))return '';
+    return meters<1000?`${Math.round(meters)} m away`:`${(meters/1000).toFixed(1)} km away`;
   }
-  async function searchNearby() {
-    const query=document.querySelector('#nearby-query')?.value.trim();
-    const typedArea=document.querySelector('#search-area')?.value.trim()||state.lastArea;
-    const useLocation=!!state.lastLocation&&useGpsForSearch;
-    const area=useLocation?'':typedArea;
-    const output=document.querySelector('#nearby-results');
-    if(!query){locationStatus('Type what you fancy finding first — “tapas”, “pub” or “ice cream” works.');return;}
-    if(!useLocation&&!area){locationStatus('Tap “Find me” or type a town first, and we’ll get our bearings.');return;}
-    if(output)output.innerHTML='<div class="nearby-empty">Asking Google Maps for the local intelligence…</div>';
-    locationStatus(useLocation?'Searching Google Maps around your saved location…':`Searching Google Maps around ${area}…`);
+  function showSuggestions(results, message='') {
+    const node=document.querySelector('#nearby-suggestions');if(!node)return;
+    placeSearchResults=results;
+    node.innerHTML=results.length?results.map((place,index)=>{
+      const name=place.name||'Place';
+      const area=place.display_name||'Fuengirola, Spain';
+      return `<button class="place-suggestion" type="button" role="option" aria-selected="false" data-place-choice="${index}"><span class="suggestion-icon">📍</span><span class="suggestion-copy"><strong>${esc(name)}</strong><small>${esc(area)}</small></span><span class="suggestion-arrow">Choose ›</span></button>`;
+    }).join(''):(message?`<p class="suggestion-message">${esc(message)}</p>`:'');
+  }
+  async function searchPlaces(query) {
+    if(query.trim().length<2){showSuggestions([],'Type at least two letters to search.');return;}
+    const startAt=Math.max(Date.now(),lastPlaceSearchAt+1100);
+    lastPlaceSearchAt=startAt;
+    if(startAt>Date.now())await new Promise(resolve=>setTimeout(resolve,startAt-Date.now()));
+    showSuggestions([],'Looking around Fuengirola…');
     try {
-      const maps=await loadGoogleMaps(),{Place}=await maps.importLibrary('places');
-      const request={textQuery:useLocation?query:`${query} in ${area}`,fields:['id','displayName','formattedAddress','location','googleMapsURI'],maxResultCount:8};
-      if(useLocation)request.locationBias={center:{lat:state.lastLocation.latitude,lng:state.lastLocation.longitude},radius:15000};
-      const result=await Place.searchByText(request),places=result.places||[];
-      renderGoogleResults(places,request.textQuery,useLocation?state.lastLocation:null);
-      locationStatus(places.length?`Found ${places.length} possibilities. Tap “Use this place” to add one to the passport.`:'No places found. Try another search.');
+      const params=new URLSearchParams({format:'jsonv2',q:`${query.trim()}, Fuengirola, Spain`,countrycodes:'es',limit:'6',addressdetails:'1',namedetails:'1',viewbox:'-4.80,36.65,-4.46,36.43',bounded:'1','accept-language':'en'});
+      const response=await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`,{headers:{'Accept':'application/json'}});
+      if(!response.ok)throw new Error(response.status===429?'Search is taking a breather. Wait a few seconds and try again.':'Could not reach place search. Check your connection and try again.');
+      const data=await response.json();
+      const results=data.map(item=>({...item,name:item.name||item.namedetails?.name||item.display_name?.split(',')[0]||'Place'}));
+      showSuggestions(results,results.length?'':'No matches found around Fuengirola. Try another name.');
     } catch(error) {
-      if(output)output.innerHTML=`<div class="nearby-empty">${esc(error.message||'Google search could not connect. Check the app backend setup and try again.')}</div>`;
-      locationStatus('Could not reach the Google Maps search. Check the app backend setup and try again.');
+      showSuggestions([],error.message||'Google could not find that just now. Try again in a moment.');
     }
+  }
+  function choosePlace(index) {
+    const place=placeSearchResults[index];if(!place)return;
+    const name=place.name||'Place',address=place.display_name||'Fuengirola, Spain';
+    const form=document.querySelector('#add-place');
+    selectedSearchPlace={name,address,lat:Number(place.lat),lon:Number(place.lon),osmPlaceId:String(place.place_id||'')};
+    document.querySelector('#new-place-name').value=name;
+    document.querySelector('#new-place-address').value=address;
+    const kind=`${place.class||place.category||''} ${place.type||''}`.toLowerCase();
+    const typeSelect=form?.querySelector('[name="type"]');
+    if(typeSelect)typeSelect.value=kind.includes('bar')||kind.includes('pub')?'Bar':kind.includes('cafe')?'Cafe':kind.includes('restaurant')||kind.includes('fast_food')?'Restaurant':'Other';
+    showSuggestions([]);
+    const query=document.querySelector('#nearby-query');if(query)query.value='';
+    locationStatus(`${name} selected. Add it to the list and start the family review.`);
+    form?.scrollIntoView({behavior:'smooth',block:'center'});
+    document.querySelector('#new-place-name')?.focus({preventScroll:true});
   }
   document.addEventListener('click',async event=>{
     const button=event.target.closest('button,[data-open-place]');if(!button)return;
@@ -232,22 +238,7 @@
     else if(button.dataset.openPlace){selectedPlace=button.dataset.openPlace;formScores={};render();}
     else if(button.hasAttribute('data-back')){selectedPlace=null;state.tab='places';render();}
     else if(button.dataset.rating){formScores[button.dataset.rating]=Number(button.dataset.score);const form=document.querySelector('#add-review');if(form){const holder=form.querySelector(`[data-rating-group="${button.dataset.rating}"]`);if(holder)holder.querySelectorAll('button').forEach(star=>star.classList.toggle('on',Number(star.dataset.score)<=formScores[button.dataset.rating]));}}
-    else if(button.hasAttribute('data-locate')){
-      if(!navigator.geolocation){locationStatus('This browser cannot share its location. Type a town in the box instead.');return;}
-      locationStatus('Asking your phone where we are…');
-      navigator.geolocation.getCurrentPosition(position=>{state.lastLocation={latitude:position.coords.latitude,longitude:position.coords.longitude};useGpsForSearch=true;save();locationStatus('Found you. Your location stays in this browser; tap Find it to look around.');},error=>{locationStatus(error.code===1?'Location permission was declined. Type a town and we’ll search there instead.':'Could not get a location fix. Try again or type a town.');},{enableHighAccuracy:false,timeout:15000,maximumAge:60000});
-    }
-    else if(button.hasAttribute('data-nearby-search'))searchNearby();
-    else if(button.hasAttribute('data-select-google-place')){
-      const found=googleResults[Number(button.dataset.selectGooglePlace)];if(!found)return;
-      const name=found.displayName||'',address=found.formattedAddress||'';
-      document.querySelector('#new-place-name').value=name;
-      document.querySelector('#new-place-address').value=address;
-      const form=document.querySelector('#add-place');
-      if(form){form.dataset.googlePlaceId=found.id||'';sessionPlaceDetails.set(found.id,{name,address,googleMapsUri:found.googleMapsURI||'',lat:found.location?.lat?.(),lon:found.location?.lng?.(),googleType:found.primaryTypeDisplayName||''});}
-      locationStatus(`${name} added to the form. Give it a quick once-over, then add it to your passport.`);
-      form?.scrollIntoView({behavior:'smooth',block:'center'});
-    }
+    else if(button.hasAttribute('data-place-choice'))choosePlace(Number(button.dataset.placeChoice));
     else if(button.dataset.kind){diaryKind=button.dataset.kind;renderDiary();}
     else if(button.dataset.day){diaryDay=button.dataset.day;renderDiary();}
     else if(button.dataset.action==='edit-trip'){tripEditorOpen=!tripEditorOpen;renderHome();}
@@ -257,13 +248,14 @@
     else if(button.dataset.deletePlace){if(!confirm('Remove this place and its reviews from the passport?'))return;state.places=state.places.filter(p=>p.id!==button.dataset.deletePlace);state.reviews=state.reviews.filter(r=>r.placeId!==button.dataset.deletePlace);selectedPlace=null;save();renderPlaces();}
     else if(button.dataset.profile){state.profileId=button.dataset.profile;save();render();}
   });
-  document.addEventListener('input',event=>{if(event.target.id==='place-search'){const q=event.target.value.trim().toLowerCase(),list=rankedPlaces().filter(p=>`${p.name} ${p.address} ${p.type}`.toLowerCase().includes(q)),node=document.querySelector('#place-list');if(node)node.innerHTML=placeCards(list);}else if(event.target.id==='search-area'){state.lastArea=event.target.value;useGpsForSearch=!event.target.value.trim();save();}});
+  document.addEventListener('input',event=>{if(event.target.id==='place-search'){const q=event.target.value.trim().toLowerCase(),list=rankedPlaces().filter(p=>`${p.name} ${p.address} ${p.type}`.toLowerCase().includes(q)),node=document.querySelector('#place-list');if(node)node.innerHTML=placeCards(list);}});
   document.addEventListener('change',event=>{if(event.target.id==='review-type'){reviewType=event.target.value;const box=document.querySelector('#rating-breakdown');if(box)box.innerHTML=ratingSets[reviewType].map(([key,label])=>starRow(key,label)).join('');}});
   document.addEventListener('change',async event=>{if(event.target.id==='import-backup'){const file=event.target.files?.[0];if(!file)return;try{const incoming=JSON.parse(await file.text());if(!Array.isArray(incoming.places)||!Array.isArray(incoming.reviews)||!Array.isArray(incoming.entries)||!Array.isArray(incoming.votes))throw new Error('invalid');state={...freshState(),...incoming,trip:{...defaultTrip,...incoming.trip}};save();alert('Backup restored on this device.');render();}catch{alert('That backup file could not be read.');}}});
   document.addEventListener('submit',async event=>{
     event.preventDefault();const form=event.target;
-    if(form.id==='trip-form'){const d=new FormData(form);state.trip.name=String(d.get('name')).trim()||defaultTrip.name;state.trip.destination=String(d.get('destination')).trim()||defaultTrip.destination;state.trip.startDate=String(d.get('startDate'));state.trip.endDate=String(d.get('endDate'));if(state.trip.startDate&&state.trip.endDate&&state.trip.endDate<state.trip.startDate)return alert('The return date needs to be after the start date.');tripEditorOpen=false;save();renderHome();}
-    else if(form.id==='add-place'){const d=new FormData(form),place={id:`place-${Date.now()}`,type:String(d.get('type'))};if(form.dataset.googlePlaceId)place.googlePlaceId=form.dataset.googlePlaceId;else{place.name=String(d.get('name')).trim();place.address=String(d.get('address')).trim();if(state.lastLocation&&useGpsForSearch){place.lat=state.lastLocation.latitude;place.lon=state.lastLocation.longitude;}}state.places.unshift(place);save();googleResults=[];renderPlaces();}
+    if(form.id==='place-finder'){const d=new FormData(form);searchPlaces(String(d.get('query')||''));}
+    else if(form.id==='trip-form'){const d=new FormData(form);state.trip.name=String(d.get('name')).trim()||defaultTrip.name;state.trip.destination=String(d.get('destination')).trim()||defaultTrip.destination;state.trip.startDate=String(d.get('startDate'));state.trip.endDate=String(d.get('endDate'));if(state.trip.startDate&&state.trip.endDate&&state.trip.endDate<state.trip.startDate)return alert('The return date needs to be after the start date.');tripEditorOpen=false;save();renderHome();}
+    else if(form.id==='add-place'){const d=new FormData(form),place={id:`place-${Date.now()}`,type:String(d.get('type')),name:String(d.get('name')).trim(),address:String(d.get('address')).trim()};if(selectedSearchPlace){place.lat=selectedSearchPlace.lat;place.lon=selectedSearchPlace.lon;place.osmPlaceId=selectedSearchPlace.osmPlaceId;}state.places.unshift(place);save();selectedSearchPlace=null;renderPlaces();}
     else if(form.id==='add-review'){if(!formScores.overall)return alert('Give the overall verdict a star rating first.');const d=new FormData(form),kind=String(d.get('reviewType'))||reviewType,review={id:`review-${Date.now()}`,placeId:selectedPlace,profileId:state.profileId,reviewType:kind,overall:formScores.overall,comment:String(d.get('comment')).trim(),returnVerdict:String(d.get('returnVerdict')),createdAt:new Date().toISOString()};for(const [key] of ratingSets[kind])review[key]=formScores[key]||0;state.reviews.unshift(review);if(save()){formScores={};reviewType='food';render();}}
     else if(form.id==='profile-form'){const d=new FormData(form);for(const p of state.profiles)p.name=String(d.get(`name-${p.id}`)).trim()||p.name;save();render();}
     else if(form.id==='add-profile'){if(state.profiles.length>=8)return alert('The review panel is full. Eight people is already a lot of opinions.');const d=new FormData(form),type=String(d.get('type')),name=String(d.get('name')).trim();if(!name)return;state.profiles.push({id:`${type}-${Date.now()}`,name,type,emoji:type==='kid'?'🍦':'🧳'});save();render();}

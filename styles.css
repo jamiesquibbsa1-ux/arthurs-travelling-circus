@@ -45,3 +45,52 @@
 .button:active{transform:translateY(2px);box-shadow:0 1px 0 #6b2024}
 .bottom-nav{background:linear-gradient(90deg,#12364a,#194e60)}
 @media(max-width:560px){.brand-logo{width:47px;height:50px;border-radius:9px}.brand{gap:8px}.brand small{font-size:7px;letter-spacing:.06em}.nearby-search-row{align-items:stretch}.nearby-search-row .button{padding:10px}.nearby-card{align-items:flex-start;flex-direction:column}.nearby-card small{max-width:100%}.nearby-actions{width:100%;justify-content:flex-end}.nearby-map{height:180px}}
+
+/* Playful, modern holiday styling */
+:root{color-scheme:light;--navy:#22506a;--navy2:#2b7080;--red:#e05e50;--cream:#fff7e6;--paper:#fffefa;--gold:#f2c451;--ink:#283d45;--muted:#65777b;--line:#eadcbe;--pale:#e5f3ed;--shadow:0 7px 0 #21506a0d,0 12px 28px #21506a12;font-family:ui-rounded,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif}
+body{background:#fff7e6;color:var(--ink);font-family:ui-rounded,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif}
+.app-shell{background:radial-gradient(circle at 92% 12%,#fff0c5 0 95px,transparent 96px),linear-gradient(180deg,#fffaf0 0,var(--cream) 520px)}
+.brand strong,.passport-cover h1,.section-head h2,.place-heading h1,.content>h1,.content h2,.award-card strong,.quip p,.quote{font-family:ui-rounded,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.035em}
+.brand strong{font-weight:850}.brand small{letter-spacing:.08em;color:#59808a}
+.brand-logo{border-radius:16px;border:3px solid #ffd66f;box-shadow:3px 4px 0 #22506a20;transform:rotate(-4deg)}
+.content>h1{font-size:clamp(30px,6vw,45px);line-height:1.08;font-weight:900}
+.section-head h2,.content h2{font-weight:850}
+.card,.passport-cover,.place-heading,.quip,.notice,.award-card,.place-card{border-radius:18px}
+.card{box-shadow:var(--shadow)}
+.passport-cover{background:linear-gradient(125deg,#2b7181,#22506a 68%,#347d78);border:0;box-shadow:0 8px 0 #17485b16,0 14px 25px #24546b20}
+.cover-seal{background:#f4c857;color:#285468;border:4px solid #fff0b9;box-shadow:0 3px 0 #183c4c22}
+.button{background:#e05e50;border-radius:999px;box-shadow:0 4px 0 #a9423a;color:#fff;font-weight:850}
+.button:hover{background:#ce5146}.soft-button{background:#e6f3ec;border-radius:999px;color:#21576b;font-weight:850}
+.field input,.field textarea,.field select,.search{border-radius:15px;border:2px solid #eadfc8;background:#fffefa;font:inherit;font-weight:650}
+.field input:focus,.field textarea:focus,.field select:focus,.search:focus{outline:3px solid #68b6b0;outline-offset:2px}
+.bottom-nav{background:linear-gradient(90deg,#22506a,#317d7b);border-radius:20px 20px 0 0}
+.bottom-nav button{font-family:ui-rounded,"Avenir Next",system-ui,sans-serif;font-size:11px}.bottom-nav button span{font-size:22px}
+.snack-stickers{display:flex;gap:10px;align-items:center;margin:10px 0 2px;padding-left:4px}
+.snack-stickers span{width:40px;height:40px;display:grid;place-items:center;border-radius:14px;background:#fffefa;border:2px solid #f3d98a;box-shadow:0 3px 0 #22506a16;font-size:23px;transform:rotate(-5deg)}
+.snack-stickers span:nth-child(even){transform:rotate(5deg);background:#e8f5ed;border-color:#b7dfcf}
+.page-stickers{float:right;margin:-9px 2px 2px 12px}
+.fun-finder{overflow:visible;background:linear-gradient(135deg,#fffef9,#fff4d8);border:2px solid #f2d77d;padding:17px}
+.finder-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.finder-top h2{margin:4px 0 0;font-size:23px;color:var(--navy)}
+.location-button{white-space:nowrap;padding:11px 14px}
+.place-lookup-label{margin-top:13px;color:var(--navy);font-size:14px}
+.place-lookup-label input{font-size:17px;padding:15px 16px}
+.suggestions{display:grid;gap:7px;margin-top:9px}
+.place-suggestion{width:100%;display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;text-align:left;padding:10px 12px;border:2px solid #e4efdf;border-radius:15px;background:#fff;box-shadow:0 3px 0 #22506a0c;color:var(--ink);cursor:pointer;font:inherit}
+.place-suggestion:hover,.place-suggestion:focus-visible{border-color:#7bb8a7;background:#f3fbf5;outline:0}
+.suggestion-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:#fff0d2;font-size:20px}
+.suggestion-copy{display:grid;gap:3px;min-width:0}.suggestion-copy strong{color:var(--navy);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.suggestion-copy small{color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suggestion-arrow{color:var(--red);font-size:11px;font-weight:900;white-space:nowrap}
+.suggestion-message{margin:0;padding:11px 13px;border-radius:13px;background:#fff0d2;color:#775b28;font-size:12px;line-height:1.45}
+.google-attribution{margin:9px 1px 0;text-align:right;color:#62767a;font:700 10px system-ui,sans-serif}
+.finder-joke{margin:5px 0 0;color:#7a8580;font-size:11px;text-align:right}
+.place-finder-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:9px;margin-top:10px}
+.place-finder-form .place-lookup-label{margin:0}
+.place-search-button{min-height:49px;padding:12px 21px}
+.google-attribution{display:block;margin:9px 0 0;text-align:right;background:none;border:0;padding:0;font:500 10px system-ui,sans-serif}
+.google-attribution a{color:#62767a;text-decoration:underline}
+.quip{background:#fff0d2;border-left:0;border-bottom:4px solid var(--gold)}
+.quip p{font-style:normal;font-weight:750}
+.place-card{border:2px solid #eee3ce}
+.rating button{font-family:system-ui,sans-serif}
+@media(max-width:560px){.snack-stickers{gap:7px}.snack-stickers span{width:35px;height:35px;font-size:21px;border-radius:12px}.page-stickers{margin-top:-5px}.finder-top h2{font-size:20px}.place-finder-form{grid-template-columns:minmax(0,1fr) auto}.place-search-button{padding:10px 16px}.place-suggestion{grid-template-columns:34px 1fr;gap:8px}.suggestion-icon{width:32px;height:32px}.suggestion-arrow{display:none}.place-lookup-label input{font-size:16px}}

@@ -1,12 +1,5 @@
-Google Maps search setup
+Google Places integration (later)
 
-1. In Google Cloud Console, use a billing-enabled project and enable Maps JavaScript API and Places API (New).
-2. Create a browser API key. Restrict its application to your HTTPS website. For this GitHub Pages site, use:
-   https://jamiesquibbsa1-ux.github.io/*
-   Under API restrictions, allow only Maps JavaScript API and Places API (New).
-3. Open backend-config.js and put the restricted key between the quotes:
-   googleMapsApiKey: 'YOUR_RESTRICTED_KEY'
-4. Upload and commit the web files to the GitHub Pages repository, then open the hosted site over HTTPS.
-5. In Places, tap Find me or type a town, enter a search such as tapas or pub, then tap Search Google Maps and Use this place.
+The current Fuengirola place search works without a Google key. It searches OpenStreetMap when the user taps Search and shows matching places to choose from.
 
-The key is visible in website source by design, so keep both Google Cloud restrictions enabled. Do not use an unrestricted or server-only key in the browser.
+Google Places can be connected later by reusing the existing place-search service from the Tiny Tales app. There is no Google setup needed to use the current version.
