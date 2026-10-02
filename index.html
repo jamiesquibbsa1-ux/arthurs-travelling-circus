@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#172f40">
-  <meta name="description" content="The family holiday passport for Arthur's Travelling Circus. Save the stops, score the snacks and keep the holiday memories.">
+  <meta name="theme-color" content="#12364a">
+  <meta name="description" content="A family holiday passport for the places, meals and memories worth talking about — and the ones that need a formal complaint.">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./assets/circus-logo.png">
+  <link rel="icon" type="image/svg+xml" href="./passport-icon.svg">
   <link rel="stylesheet" href="./styles.css">
-  <title>Arthur's Travelling Circus</title>
+  <title>Arthur's Holiday Passport</title>
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand"><img src="./assets/circus-logo.png" alt="Arthur's Travelling Circus"><div><strong>Arthur's Travelling Circus</strong><small>Eat. Drink. Rate. Repeat.</small></div></div>
-      <label class="profile-switch">Playing as <select id="profile-select" aria-label="Choose family profile"></select></label>
+      <div class="brand"><div class="brand-mark" aria-hidden="true"><span>AHP</span><b>✦</b></div><div><strong>Arthur's Holiday Passport</strong><small>FAMILY EDITION · HONEST REVIEWS</small></div></div>
+      <label class="profile-switch"><span>Writing as</span><select id="profile-select" aria-label="Choose family member"></select></label>
     </header>
     <main id="app" tabindex="-1"></main>
     <nav class="bottom-nav" aria-label="Main navigation">
-      <button data-tab="home" class="active"><span>🧳</span>Passport</button>
-      <button data-tab="places"><span>🍽️</span>Stops</button>
-      <button data-tab="diary"><span>📖</span>Diary</button>
-      <button data-tab="awards"><span>🏆</span>Awards</button>
-      <button data-tab="family"><span>🎪</span>Family</button>
+      <button data-tab="home" class="active"><span>▣</span>Passport</button>
+      <button data-tab="places"><span>⌖</span>Places</button>
+      <button data-tab="diary"><span>▤</span>Diary</button>
+      <button data-tab="awards"><span>★</span>Verdicts</button>
+      <button data-tab="family"><span>♙</span>Family</button>
     </nav>
   </div>
   <script src="./app.js" defer></script>

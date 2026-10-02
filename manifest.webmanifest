@@ -1,11 +1,11 @@
 {
-  "name": "Arthur's Travelling Circus",
-  "short_name": "Circus",
-  "description": "Family holiday passport, food ratings and holiday diary.",
+  "name": "Arthur's Holiday Passport",
+  "short_name": "Holiday Passport",
+  "description": "Family holiday memories and brutally fair place reviews.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6eedc",
-  "theme_color": "#172f40",
-  "icons": [{"src":"./assets/circus-logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+  "background_color": "#f4eddd",
+  "theme_color": "#12364a",
+  "icons": [{"src":"./passport-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]
 }
