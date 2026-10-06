@@ -1,4 +1,4 @@
-const CACHE = 'arthurs-holiday-passport-v18';
+const CACHE = 'arthurs-holiday-passport-v19';
 const CORE = ['./', './index.html', './styles.css', './backend-config.js', './shared-client.js', './app.js', './manifest.webmanifest', './circus-logo.jpg', './privacy.html', './terms.html'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE))));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))));
