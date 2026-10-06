@@ -1,0 +1,12 @@
+ARTHUR'S HOLIDAY PASSPORT — ADMIN PROMOTION UPDATE (v15)
+
+This update adds the “Make admin” button for existing player accounts.
+Upload these files to the repository root, replacing the existing files:
+- app.js
+- styles.css
+- sw.js
+
+GitHub upload page:
+https://github.com/jamiesquibbsa1-ux/arthurs-travelling-circus/upload/main/
+
+Commit the upload to main. Then open the published site, sign in as the current admin, and open Family. “Make admin” appears on player cards.
