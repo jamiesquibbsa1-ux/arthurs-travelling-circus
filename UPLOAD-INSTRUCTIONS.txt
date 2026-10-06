@@ -1,12 +1,10 @@
-ARTHUR'S HOLIDAY PASSPORT — ADMIN PROMOTION UPDATE (v15)
+ARTHUR'S HOLIDAY PASSPORT — WEBSITE UPDATE
 
-This update adds the “Make admin” button for existing player accounts.
-Upload these files to the repository root, replacing the existing files:
-- app.js
-- styles.css
-- sw.js
+To publish this update on GitHub Pages:
+1. Extract this ZIP on a computer or in a file manager that can extract ZIP files.
+2. Open the extracted folder. Select its contents (index.html, app.js, styles.css, assets, and the other site files).
+3. On GitHub, open the repository's Upload files page and upload those extracted contents into the repository root. Keep the assets folder and the supabase folder in their existing folder structure.
+4. Commit the upload to the main branch.
+5. Refresh the live page after GitHub Pages finishes deploying. If it still shows an old copy, close the tab and reopen the page or clear the browser site data.
 
-GitHub upload page:
-https://github.com/jamiesquibbsa1-ux/arthurs-travelling-circus/upload/main/
-
-Commit the upload to main. Then open the published site, sign in as the current admin, and open Family. “Make admin” appears on player cards.
+The account setup UI is in the site files. The matching circus-admin Edge Function has already been deployed to the connected Supabase project. The source is also included under supabase/functions/circus-admin for repository history.

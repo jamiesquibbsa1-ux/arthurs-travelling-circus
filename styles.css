@@ -169,3 +169,21 @@ html,body{background:#f4faff;color:var(--ink);font-family:Inter,"Avenir Next",sy
 .category-rating-line{justify-items:center;text-align:center;padding:17px 14px}.rating-title{width:100%;display:grid;justify-items:center;gap:7px;text-align:center}.rating-title-label{display:inline-flex;align-items:center;justify-content:center;gap:8px;color:#20445e;font-size:15px;font-weight:850}.rating-title-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:#eaf8fc;color:#2586a0;font-size:19px;box-shadow:0 2px 0 #2a84a313}.rating-value{display:inline-flex;align-items:center;justify-content:center;min-width:49px;padding:4px 10px;border-radius:99px;background:#f0f8fb;color:#547182;font-size:12px;font-weight:800}.category-rating{width:100%;max-width:560px;margin:5px auto 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}.category-rating button{display:flex;min-height:65px;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:5px;border:2px solid #dceaf0;border-radius:17px;background:#fff;color:#a8bdc8;box-shadow:0 3px 0 #20445e08;transition:transform .14s,border-color .14s,background .14s}.category-rating button:hover{transform:translateY(-2px);border-color:#8cd3e1}.category-rating button .optional-star{font-size:29px;line-height:1;color:#c4d4db}.category-rating button small{font-size:10px;line-height:1;color:#718894;font-weight:800}.category-rating button.on{border-color:#f0c739;background:#fff8d9;color:#8a6900;box-shadow:0 3px 0 #edce6240}.category-rating button.on .optional-star{color:#f3b900;text-shadow:0 1px 0 #d89b00}.category-rating button.on small{color:#806500}
 .make-admin-button{grid-column:2;justify-self:start;margin-top:3px;padding:7px 11px;border:1px solid #cfe6ef;border-radius:99px;background:#eaf8fc;color:#236e87;font:800 10px/1.2 Inter,"Avenir Next",system-ui,sans-serif;cursor:pointer}.make-admin-button:hover{background:#d9f3fa;border-color:#84cedc}.family-account-card:has(.make-admin-button){border-color:#d3eaf0}
 @media(max-width:560px){.category-rating-line{padding:13px 10px}.category-rating{gap:6px}.category-rating button{min-height:57px;border-radius:14px}.category-rating button .optional-star{font-size:25px}.rating-title-label{font-size:14px}.rating-title-icon{width:29px;height:29px}.make-admin-button{font-size:9px;padding:7px 9px}}
+
+/* Account access picker and tidy, evenly centred food/drink scores */
+.account-role-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:4px 0;padding:0;border:0;min-width:0}
+.account-role-picker legend{grid-column:1/-1;margin:0 0 2px;padding:0;color:#29475b;font-size:14px;font-weight:850}
+.role-choice{position:relative;display:flex;align-items:center;justify-content:center;min-height:75px;padding:12px;border:2px solid #dceaf0;border-radius:18px;background:#fff;text-align:center;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.role-choice input{position:absolute;top:10px;right:10px;width:18px;height:18px;margin:0;accent-color:#28aecd}
+.role-choice span{display:grid;justify-items:center;gap:4px;padding:0 10px}
+.role-choice strong{color:#20445e;font-size:15px}
+.role-choice small{color:#6e838f;font-size:11px;line-height:1.3}
+.role-choice:has(input:checked){border-color:#35b4d1;background:#effbff;box-shadow:0 3px 0 #35b4d11a}
+.admin-role-choice:has(input:checked){border-color:#f1c846;background:#fff9df;box-shadow:0 3px 0 #e0b8331c}
+.category-rating-line{box-sizing:border-box;width:100%;display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;align-items:center;gap:9px;overflow:hidden}
+.category-rating-line .rating-title{box-sizing:border-box;margin:0;justify-self:center}
+.category-rating-line .rating-title-label{max-width:100%;flex-wrap:wrap}
+.category-rating-line .rating-value{justify-self:center}
+.category-rating{box-sizing:border-box;justify-self:center;align-items:stretch;padding:0 1px}
+.category-rating button{box-sizing:border-box;width:100%;min-width:0;margin:0;line-height:1}
+@media(max-width:380px){.account-role-picker{gap:7px}.role-choice{min-height:78px;padding:9px 6px}.role-choice strong{font-size:13px}.role-choice small{font-size:10px}.category-rating{gap:5px}.category-rating button{min-height:53px;padding:4px 2px}.category-rating button .optional-star{font-size:23px}}
