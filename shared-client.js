@@ -9,9 +9,14 @@
     return `${key}@players.arthurscircus.invalid`;
   };
   const check = (result) => { if (result.error) throw result.error; return result.data; };
+  const requireClient = () => {
+    if (!api.client) throw new Error('The family account service did not start. Refresh the page and check your connection.');
+    return api.client;
+  };
 
   api.init = async () => {
-    if (!library?.createClient || !config.supabaseUrl || !config.supabasePublishableKey) return false;
+    if (!library?.createClient) throw new Error('The sign-in library did not load. Refresh the page and check your connection.');
+    if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('The family account setup is missing from this site.');
     api.client = library.createClient(config.supabaseUrl, config.supabasePublishableKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
@@ -37,19 +42,19 @@
     return mine.data;
   };
   api.signIn = async (name, password) => {
-    const { data, error } = await api.client.auth.signInWithPassword({ email: aliasFor(name), password });
+    const { data, error } = await requireClient().auth.signInWithPassword({ email: aliasFor(name), password });
     if (error) throw error;
     await api.acceptSession(data.user);
     return data;
   };
   api.bootstrapAdmin = async values => {
-    const result = await api.client.functions.invoke('circus-admin', { body: { action: 'bootstrap-admin', ...values } });
+    const result = await requireClient().functions.invoke('circus-admin', { body: { action: 'bootstrap-admin', ...values } });
     if (result.error) throw result.error;
     if (result.data?.error) throw new Error(result.data.error);
     return result.data;
   };
   api.admin = async (action, body = {}) => {
-    const result = await api.client.functions.invoke('circus-admin', { body: { action, ...body } });
+    const result = await requireClient().functions.invoke('circus-admin', { body: { action, ...body } });
     if (result.error) throw result.error;
     if (result.data?.error) throw new Error(result.data.error);
     return result.data;
