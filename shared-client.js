@@ -64,16 +64,24 @@
   api.memberEmoji = id => api.members.find(member => member.user_id === id)?.emoji || '🙂';
   api.upload = async (file, area, ownerId) => {
     if (!file || !file.type?.startsWith('image/')) throw new Error('Choose an image first.');
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader(); reader.onerror = reject; reader.onload = () => {
-        const image = new Image(); image.onerror = reject; image.onload = () => {
-          const scale = Math.min(1, 1400 / Math.max(image.width, image.height));
-          const canvas = document.createElement('canvas'); canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
-          canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', .76));
-        }; image.src = reader.result;
-      }; reader.readAsDataURL(file);
+    const image = await new Promise((resolve, reject) => {
+      const photoUrl = URL.createObjectURL(file);
+      const photo = new Image();
+      photo.onload = () => { URL.revokeObjectURL(photoUrl); resolve(photo); };
+      photo.onerror = () => { URL.revokeObjectURL(photoUrl); reject(new Error('Your phone could not open that photo. Try a screenshot or another JPG.')); };
+      photo.src = photoUrl;
     });
-    const blob = await (await fetch(dataUrl)).blob();
+    const scale = Math.min(1, 1400 / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Your phone could not prepare that photo. Try a screenshot or another JPG.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve, reject) => canvas.toBlob(
+      output => output ? resolve(output) : reject(new Error('Your phone could not resize that photo. Try a screenshot or another JPG.')),
+      'image/jpeg', .76,
+    ));
     const photoId = crypto.randomUUID();
     const folder = area === 'competitions'
       ? `${api.member.family_id}/competitions`
@@ -82,7 +90,7 @@
         : `${api.member.family_id}/posts/${api.user.id}`;
     const path = `${folder}/${ownerId || photoId}-${photoId}.jpg`;
     const { error } = await api.client.storage.from('circus-media').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-    if (error) throw error;
+    if (error) throw new Error(error.message || 'The photo could not be uploaded. Check your connection and try again.');
     return path;
   };
   api.signedUrl = async path => {
